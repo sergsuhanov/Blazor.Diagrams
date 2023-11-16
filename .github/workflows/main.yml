@@ -1,6 +1,6 @@
 name: DeployDemoToGitHubPages
 env:
-  PUBLISH_DIR: samples/Wasm/bin/Release/netstandard2.1/publish/wwwroot
+  PUBLISH_DIR: site/Site/bin/Release/net6.0/publish/wwwroot
 
 on:
   push:
@@ -13,7 +13,7 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Publish app
-      run: cd samples/Wasm && dotnet publish -c Release
+      run: cd site/Site && dotnet publish -c Release
 
     - name: GitHub Pages
       if: success()
