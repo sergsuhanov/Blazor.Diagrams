@@ -80,9 +80,17 @@ public class PortRenderer : ComponentBase, IDisposable
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!Port.Initialized)
+        try
         {
-            await UpdateDimensions();
+            if (!Port.Initialized)
+            {
+                await UpdateDimensions();
+            }
+        }
+        catch (Exception ex) when (ex is JSDisconnectedException || ex is OperationCanceledException)
+        {
+            // This exception is expected when the user navigates away from the page
+            // and the component is disposed. It can be ignored
         }
     }
 
