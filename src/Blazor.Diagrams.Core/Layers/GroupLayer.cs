@@ -45,5 +45,6 @@ public class GroupLayer : BaseLayer<GroupModel>
         Diagram.Links.Remove(group.Links.ToArray());
         group.Ungroup();
         group.Group?.RemoveChild(group);
+        Diagram.Controls.RemoveFor(group);
     }
 }

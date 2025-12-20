@@ -28,15 +28,22 @@ public class NodeRenderer : ComponentBase, IDisposable
 
     public void Dispose()
     {
-        Node.Changed -= OnNodeChanged;
-        Node.VisibilityChanged -= OnVisibilityChanged;
-
-        if (_element.Id != null && !Node.ControlledSize)
+        try
         {
-            _ = JsRuntime.UnobserveResizes(_element);
-        }
+            Node.Changed -= OnNodeChanged;
+            Node.VisibilityChanged -= OnVisibilityChanged;
 
-        _reference?.Dispose();
+            if (_element.Id != null && !Node.ControlledSize && JsRuntime != null)
+            {
+                _ = JsRuntime.UnobserveResizes(_element);
+            }
+
+            _reference?.Dispose();
+        }
+        catch (Exception ex) when (ex is JSDisconnectedException || ex is ObjectDisposedException)
+        {
+            // This exception can be ignored.
+        }
     }
 
     [JSInvokable]
@@ -127,17 +134,25 @@ public class NodeRenderer : ComponentBase, IDisposable
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !Node.Visible)
-            return;
-
-        if (firstRender || _becameVisible)
+        try
         {
-            _becameVisible = false;
+            if (firstRender && !Node.Visible)
+                return;
 
-            if (!Node.ControlledSize)
+            if (firstRender || _becameVisible)
             {
-                await JsRuntime.ObserveResizes(_element, _reference!);
+                _becameVisible = false;
+
+                if (!Node.ControlledSize)
+                {
+                    await JsRuntime.ObserveResizes(_element, _reference!);
+                }
             }
+        }
+        catch (Exception ex) when (ex is JSDisconnectedException || ex is OperationCanceledException)
+        {
+            // This exception is expected when the user navigates away from the page
+            // and the component is disposed. It can be ignored
         }
     }
 
