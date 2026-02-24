@@ -8,7 +8,7 @@ using Microsoft.JSInterop;
 
 namespace Blazor.Diagrams.Components;
 
-public partial class DiagramCanvas : IDisposable
+public partial class DiagramCanvas : IAsyncDisposable
 {
     private DotNetObjectReference<DiagramCanvas>? _reference;
     private bool _shouldRender;
@@ -27,17 +27,25 @@ public partial class DiagramCanvas : IDisposable
 
     [Inject] public IJSRuntime JSRuntime { get; set; } = null!;
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        BlazorDiagram.Changed -= OnDiagramChanged;
+        try
+        {
+            BlazorDiagram.Changed -= OnDiagramChanged;
 
-        if (_reference == null)
-            return;
+            if (_reference == null)
+                return;
 
-        if (elementReference.Id != null)
-            _ = JSRuntime.UnobserveResizes(elementReference);
+            if (elementReference.Id != null && JSRuntime != null)
+                await JSRuntime.UnobserveResizes(elementReference);
 
-        _reference.Dispose();
+            _reference.Dispose();
+        }
+        catch (Exception ex) when (ex is JSDisconnectedException || ex is OperationCanceledException)
+        {
+            // This exception is expected when the user navigates away from the page
+            // and the component is disposed. It can be ignored.
+        }
     }
 
     private string GetLayerStyle(int order)
@@ -56,12 +64,20 @@ public partial class DiagramCanvas : IDisposable
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await base.OnAfterRenderAsync(firstRender);
-
-        if (firstRender)
+        try
         {
-            BlazorDiagram.SetContainer(await JSRuntime.GetBoundingClientRect(elementReference));
-            await JSRuntime.ObserveResizes(elementReference, _reference!);
+            await base.OnAfterRenderAsync(firstRender);
+
+            if (firstRender)
+            {
+                BlazorDiagram.SetContainer(await JSRuntime.GetBoundingClientRect(elementReference));
+                await JSRuntime.ObserveResizes(elementReference, _reference!);
+            }
+        }
+        catch (Exception ex) when (ex is JSDisconnectedException || ex is OperationCanceledException)
+        {
+            // This exception is expected when the user navigates away from the page
+            // and the component is disposed. It can be ignored
         }
     }
 

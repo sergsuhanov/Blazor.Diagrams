@@ -7,9 +7,14 @@ on:
 
 jobs:
   build:
+    name: Push packages to NuGet
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9'
   
       - name: Pack Blazor.Diagrams.Core
         working-directory: src/Blazor.Diagrams.Core
@@ -23,11 +28,10 @@ jobs:
         working-directory: src/Blazor.Diagrams.Algorithms
         run: 'dotnet pack -p:GeneratePackageOnBuild=false --configuration Release --output ${{ env.NUGET_DIR }}'
 
-      - name: Push Blazor.Diagrams.Core
-        run: 'dotnet nuget push ${{ env.NUGET_DIR }}/Z.Blazor.Diagrams.Core.3.0.1.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate'
-
-      - name: Push Blazor.Diagrams
-        run: 'dotnet nuget push ${{ env.NUGET_DIR }}/Z.Blazor.Diagrams.3.0.1.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate'
-
-      - name: Push Blazor.Diagrams.Algorithms
-        run: 'dotnet nuget push ${{ env.NUGET_DIR }}/Z.Blazor.Diagrams.Algorithms.3.0.1.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate'
+      - name: Push
+        run: >-
+          for i in $(find ${{ env.NUGET_DIR }} -type f -name "*.nupkg");
+          do
+           echo "File: ${i} \n";
+           dotnet nuget push $i --api-key "${{ secrets.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+          done

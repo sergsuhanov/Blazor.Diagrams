@@ -8,6 +8,7 @@ using Blazor.Diagrams.Models;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.JSInterop;
 
 namespace Blazor.Diagrams.Components.Renderers;
 
@@ -53,17 +54,25 @@ public class GroupRenderer : ComponentBase, IDisposable
 
     protected override void OnAfterRender(bool firstRender)
     {
-        if (Size.Zero.Equals(Group.Size))
-            return;
-
-        // Update the port positions (and links) when the size of the group changes
-        // This will save us some JS trips as well as useless rerenders
-
-        if (_lastSize == null || !_lastSize.Equals(Group.Size))
+        try
         {
-            Group.ReinitializePorts();
-            Group.RefreshLinks();
-            _lastSize = Group.Size;
+            if (Size.Zero.Equals(Group.Size))
+                return;
+
+            // Update the port positions (and links) when the size of the group changes
+            // This will save us some JS trips as well as useless rerenders
+
+            if (_lastSize == null || !_lastSize.Equals(Group.Size))
+            {
+                Group.ReinitializePorts();
+                Group.RefreshLinks();
+                _lastSize = Group.Size;
+            }
+        }
+        catch (Exception ex) when (ex is JSDisconnectedException || ex is OperationCanceledException)
+        {
+            // This exception is expected when the user navigates away from the page
+            // and the component is disposed. It can be ignored
         }
     }
 

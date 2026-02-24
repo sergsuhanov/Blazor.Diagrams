@@ -80,9 +80,17 @@ public class PortRenderer : ComponentBase, IDisposable
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!Port.Initialized)
+        try
         {
-            await UpdateDimensions();
+            if (!Port.Initialized)
+            {
+                await UpdateDimensions();
+            }
+        }
+        catch (Exception ex) when (ex is JSDisconnectedException || ex is OperationCanceledException)
+        {
+            // This exception is expected when the user navigates away from the page
+            // and the component is disposed. It can be ignored
         }
     }
 
@@ -99,6 +107,7 @@ public class PortRenderer : ComponentBase, IDisposable
 
     private PortModel? FindPortOn(double clientX, double clientY)
     {
+        var relativePt = BlazorDiagram.GetRelativeMousePoint(clientX, clientY);
         var allPorts = BlazorDiagram.Nodes.SelectMany(n => n.Ports)
             .Union(BlazorDiagram.Groups.SelectMany(g => g.Ports));
 
@@ -107,7 +116,6 @@ public class PortRenderer : ComponentBase, IDisposable
             if (!port.Initialized)
                 continue;
 
-            var relativePt = BlazorDiagram.GetRelativeMousePoint(clientX, clientY);
             if (port.GetBounds().ContainsPoint(relativePt))
                 return port;
         }
